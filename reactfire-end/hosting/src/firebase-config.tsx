@@ -1,10 +1,10 @@
 export const firebaseConfig = {
     // Your Firebase configs
-    apiKey: 'API_KEY',
-    authDomain: 'PROJECT_ID.firebaseapp.com',
-    databaseURL: 'https://PROJECT_ID.firebaseio.com',
-    projectId: 'PROJECT_ID',
-    storageBucket: 'PROJECT_ID.appspot.com',
+    apiKey: 'AIzaSyC4XpTylwy3NylpArq43OpjSL5VGKWkX6s',
+    authDomain: 'friendlyeats-c625b.firebaseapp.com',
+    databaseURL: 'https://friendlyeats-c625b.firebaseio.com',
+    projectId: 'friendlyeats-c625b',
+    storageBucket: 'friendlyeats-c625b.appspot.com',
     messagingSenderId: 'SENDER_ID',
     appId: 'APP_ID',
     measurementId: 'G-MEASUREMENT_ID',
