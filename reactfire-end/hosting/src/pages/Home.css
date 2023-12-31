@@ -1,0 +1,61 @@
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: Segoe UI, Tahoma, sans-serif;
+}
+
+.Home input,
+.Home button {
+    font: inherit;
+}
+
+.Home header {
+    background-color: #323639;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    color: white;
+}
+
+.Home header h1 {
+    font-size: inherit;
+    margin: 0;
+}
+
+.Home__container {
+    display: flex;
+    flex-direction: row;
+    background-color: aliceblue;
+    height: 100vh;
+}
+
+.Home__left {
+    align-items: flex-start;
+    max-width: 30%;
+    height: 100%;
+    flex-direction: column;
+    padding: 2em;
+}
+
+.Places{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.Home__right {
+    max-width: 50%;
+    padding: 2em;
+    flex: 1;
+    overflow-y: scroll;
+}
+
+.Home__container__content .react-calendar {
+    border-radius: 16px;
+    background-color: white;
+    padding: 10px;
+}
+

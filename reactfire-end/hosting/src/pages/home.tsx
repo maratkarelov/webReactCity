@@ -1,121 +1,162 @@
-import { useEffect, useState } from 'react';
-import { useFirestoreCollectionData, useFirestore } from 'reactfire';
-import { where, collection, orderBy, query } from 'firebase/firestore';
-import FilterModal from '../components/filterModal';
-import RestaurantCards from '../components/restaurantCards';
+import {useEffect, useState} from 'react';
+import {useFirestoreCollectionData, useFirestore, useFirestoreDocData} from 'reactfire';
+import {addDoc, setDoc, doc, where, collection, orderBy, query, getFirestore} from 'firebase/firestore';
+import TripCards from '../components/trips/tripCards';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import './Home.css';
+import PlacesList from '../components/places/placesList';
 
+type ValuePiece = Date | null;
+
+type Value = ValuePiece | [ValuePiece, ValuePiece];
 const Home = () => {
-    const [filters, setFilters] = useState({
-        category: '',
-        city: '',
-        price: '',
-        sort: 'Rating',
-    });
+    const [selectedDate, onChange] = useState<Value>(new Date());
+    const [departureRef, setDepartureRef] = useState(undefined);
+    const [arrivalRef, setArrivalRef] = useState(undefined);
+    const [departureRefs, setDepartureRefs] = useState<any[]>([]);
+    const [arrivalRefs, setArrivalRefs] = useState<any[]>([]);
 
-    // Read from Firestore
     const firestore = useFirestore();
-    const getFilteredRestaurants = () => {
-        let q = query(collection(firestore, 'restaurants'));
-        if (filters.category !== '') {
-            q = query(q, where('category', '==', filters.category));
-        }
-        if (filters.city !== '') {
-            q = query(q, where('city', '==', filters.city));
-        }
-        if (filters.price !== '') {
-            q = query(q, where('price', '==', filters.price.length));
-        }
-        if (filters.sort === 'Rating') {
-            q = query(q, orderBy('avgRating', 'desc'));
-        } else if (filters.sort === 'Reviews') {
-            q = query(q, orderBy('numRatings', 'desc'));
-        }
+    const getTrips = () => {
+        let q = query(collection(firestore, 'trips'), where('dateDeparture', '<', selectedDate));
+        q = query(q, orderBy('dateDeparture', 'desc'));
         return q;
     };
 
-    const { data: restaurants } = useFirestoreCollectionData(
-        getFilteredRestaurants(),
+    const getFilteredTrips = () => {
+        let q = query(collection(firestore, 'trips'), where('dateDeparture', '<', selectedDate));
+        if (departureRef !== undefined) {
+            q = query(q, where('departureRef', '==', departureRef));
+        }
+        if (arrivalRef !== undefined) {
+            q = query(q, where('arrivalRef', '==', arrivalRef));
+        }
+        q = query(q, orderBy('dateDeparture', 'asc'));
+        return q;
+    };
+
+    const {data: trips} = useFirestoreCollectionData(
+        getTrips(),
         {
             idField: 'id',
         }
     );
-    
+
+    const {data: filteredTrips} = useFirestoreCollectionData(
+        getFilteredTrips(),
+        {
+            idField: 'id',
+        }
+    );
+
+    console.log(departureRef?.path);
+    // console.log(departureRefs?.map((it) => it.id));
     useEffect(() => {
-        console.log('fetching filters...');
-    }, [filters]);
+        const departureRefs = trips?.map(trip => trip.departureRef);
+        const departurePath = new Set(departureRefs?.map(ref => ref.path));
+        const departureRefsSet = [];
+        departurePath.forEach(path => {
+            departureRefsSet.push(departureRefs.find(ref => ref.path == path));
+        });
+        setDepartureRefs(departureRefsSet);
+        const arrivalRefs = trips?.map(trip => trip.arrivalRef);
+        const arrivalPath = new Set(arrivalRefs?.map(ref => ref.path));
+        const arrivalRefsSet = [];
+        arrivalPath.forEach(path => {
+            arrivalRefsSet.push(arrivalRefs.find(ref => ref.path == path));
+        });
+        setArrivalRefs(arrivalRefsSet);
+    }, [trips]);
 
-    const updateField = (type: string, value: string) => {
-        setFilters({ ...filters, [type]: value });
+    const mockData = async () => {
+        const db = getFirestore();
+        const driverRef = doc(db, 'users', 'user1');
+        await setDoc(driverRef, {
+            name: 'Victor',
+            photoUrl: 'https://firebasestorage.googleapis.com/v0/b/city-city-79092.appspot.com/o/users%2Fily8eqRAjbdSfMGtF62NNl41USL2%2Fprofile%2Fprofile.jpg?alt=media&token=48184d3f-259a-4a51-b87e-c3263461f674'
+        });
+        const vehicleRef = doc(db, 'vehicles', 'Dodge');
+        await setDoc(vehicleRef, {model: 'Dodge'});
+        const countryRef = doc(db, 'places', 'Ukraine');
+        await setDoc(countryRef, {name_ru: 'Украина'});
+        const regionKievRef = doc(countryRef, 'items', 'Kiev_region');
+        await setDoc(regionKievRef, {name_ru: 'Киевская область'});
+        const regionCherkasyRef = doc(countryRef, 'items', 'Cherkasy_region');
+        await setDoc(regionCherkasyRef, {name_ru: 'Черкасская область'});
+        const CherkasyRef = doc(regionCherkasyRef, 'items', 'Cherkasy');
+        await setDoc(CherkasyRef, {name_ru: 'Черкассы'});
+        const DrabovRef = doc(regionCherkasyRef, 'items', 'Drabov');
+        await setDoc(DrabovRef, {name_ru: 'Драбов'});
+        const KievRef = doc(regionKievRef, 'items', 'Kiev');
+        await setDoc(KievRef, {name_ru: 'Киев'});
+        const BorispolRef = doc(regionKievRef, 'items', 'Borispol');
+        await setDoc(BorispolRef, {name_ru: 'Борисполь'});
+        const cities = [CherkasyRef, DrabovRef, KievRef, BorispolRef];
+        const min = 0;
+        const max = 3;
+        for (let i = 0; i < 20; i++) {
+            const tripRef = doc(db, 'trips', 'trips_' + i.toString());
+            const randDeparture = Math.floor(Math.random() * (max - min + 1)) + min;
+            const randArrival = Math.floor(Math.random() * (max - min + 1)) + min;
+            console.log(randDeparture, randArrival, cities[randDeparture]?.path, cities[randArrival]?.path);
+            await setDoc(tripRef,
+                {
+                    driverRef: driverRef,
+                    vehicleRef: vehicleRef,
+                    departureRef: cities[randDeparture],
+                    arrivalRef: cities[randArrival],
+                    autoConfirmation: true,
+                    dateDeparture: new Date(),
+                    dateArrival: new Date(),
+                    price: 400,
+                    countPlaces: 6,
+                    countBooked: 2,
+                    currencyCountryCode: 'ru',
+                    timeZone: '+0400',
+                    note: '🅰️  Тольятти Космонавтов 32а, аптека Farmlend. _________________________________________👉  Еду по новой дороге. _________________________________________🅱️  СамараАвроры 211а, кулинария Бико.~~~~~~~~~~~~~~~~~~~~~~~~~~~~✅  Бронь переднего места +50 р.'
+                });
+        }
+        //
     };
-
-    const [displayCol, setDisplayCol] = useState(true);
     return (
-        <div className="bg-navy-50 min-h-screen h-full ">
-            <div className="w-3/4 bg-navy-20 min-h-screen h-full mx-auto">
-                <div className="flex items-center justify-center p-4">
-                    <FilterModal filters={filters} setFilters={setFilters} />
-                    <label className="relative inline-flex items-center cursor-pointer mx-6">
-                        <input
-                            type="checkbox"
-                            value=""
-                            className="sr-only peer"
-                            onChange={() => setDisplayCol(!displayCol)}
-                        />
-                        <div className="w-11 h-6 bg-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </label>
+        <div className="Home__container">
+            <div className="Home__left">
+                <div className="Home__container__content">
+                    <Calendar onChange={onChange}/>
                 </div>
-                <div className="flex items-start justify-start px-4 ml-32">
-                    {Object.entries(filters).map(([type, value]) => {
-                        if (type == 'sort' || value == '') {
-                            return null;
-                        }
-                        return (
-                            <Tag
-                                key={value}
-                                type={type}
-                                value={value}
-                                updateField={updateField}
-                            />
-                        );
-                    })}
+                <div className="Home__container__content">
+                    {/*<button onClick={() => {*/}
+                    {/*    mockData();*/}
+                    {/*}}>*/}
+                    {/*    mock*/}
+                    {/*</button>*/}
+                    <div className="Places">
+                        {departureRefs &&
+                            <PlacesList
+                                title="Откуда"
+                                refs={departureRefs}
+                                callback={(path) => {
+                                    setDepartureRef(departureRefs.find((ref) => ref.path == path));
+                                }}>
+                            </PlacesList>}
+                        {arrivalRefs &&
+                            <PlacesList
+                                title="Куда"
+                                refs={arrivalRefs}
+                                callback={(path) => {
+                                    setArrivalRef(departureRefs.find((ref) => ref.path == path));
+                                }}
+                            ></PlacesList>}
+                    </div>
                 </div>
-                <RestaurantCards restaurants={restaurants} displayCol={displayCol} />
+
+            </div>
+            <div className="Home__right">
+                <TripCards trips={filteredTrips}/>
             </div>
         </div>
     );
 };
 
 export default Home;
-
-const Tag = ({ type, value, updateField }: any) => {
-    return (
-        <span
-            id={`${type}`}
-            className="inline-flex items-center px-2 py-1 mr-2 text-sm font-medium text-white bg-navy-300 rounded-full"
-        >
-            {value}
-            <button
-                type="button"
-                className="inline-flex items-center p-0.5 ml-2 text-sm text-navy-20 bg-transparent rounded-full hover:bg-navy-300"
-                data-dismiss-target={`#${type}`}
-                aria-label="Remove"
-                onClick={() => updateField(type, '')}
-            >
-                <svg
-                    aria-hidden="true"
-                    className="w-3.5 h-3.5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                    ></path>
-                </svg>
-                <span className="sr-only">Remove badge</span>
-            </button>
-        </span>
-    );
-};
